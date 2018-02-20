@@ -1,30 +1,31 @@
 from pandas import DataFrame
 import pandas as pd
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 import sklearn
-from sklearn.model_selection import train_test_split
-
-def agerange(x):
-	if 'Master' in x:
-		x = 0
-	else:
-		x = 1
-	return x
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from sklearn.preprocessing import LabelEncoder
 
 #Importing Data
 train_set = pd.read_csv('train.csv')
-train_set['Sex'] = train_set['Sex'].map({'female': 1, 'male': 0})
 test_set = pd.read_csv('test.csv')
-test_set['Sex'] = test_set['Sex'].map({'female': 1, 'male': 0})
+clean_set = [train_set, test_set]
 
-#Training Data Clearning
-features = train_set[['Pclass','Sex', 'SibSp', 'Parch', 'Name']]
-features['Name'] = features['Name'].map(agerange)
+#Data Clearning
+label = LabelEncoder()
+for dataset in clean_set:
+	dataset['Fare'].fillna(dataset['Fare'].median(), inplace = True)
+	dataset['Embarked'].fillna(dataset['Embarked'].mode()[0], inplace = True)
+	dataset['Embarked'] = label.fit_transform(dataset['Embarked'])
+	dataset['Title'] = dataset['Name'].str.split(", ", expand=True)[1].str.split(".", expand=True)[0]
+	dataset['Title'] = dataset['Title'].map({'Mr':0, 'Mrs': 1, 'Miss': 2, 'Master': 3})
+	dataset['Title'] = dataset['Title'].fillna('4')
+	dataset['Sex'] = label.fit_transform(dataset['Sex'])
+	dataset['FamilyUnit'] = dataset['SibSp'] + dataset['Parch']
+	dataset['Age'] = dataset.groupby('Title').transform(lambda x: x.fillna(round(x.mean())))['Age']
+
+features = train_set[['Pclass','Sex','SibSp','Parch','Fare','Embarked','Title']] #, 'FamilyUnit']]
 survival = train_set[['Survived']]
 
-#Test Data Cleaning
-test_X = test_set[['Pclass', 'Sex', 'SibSp', 'Parch', 'Name']]
-test_X['Name'] = test_X['Name'].map(agerange)
+test_X = test_set[['Pclass','Sex','SibSp','Parch','Fare','Embarked','Title']] #, 'FamilyUnit']]
 
 #Training Model
 RF_Model = GradientBoostingClassifier()
