@@ -1,8 +1,9 @@
 from pandas import DataFrame
 import pandas as pd
+import numpy as np
 import sklearn
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.preprocessing import LabelEncoder
+from xgboost import XGBClassifier
 
 #Importing Data
 train_set = pd.read_csv('train.csv')
@@ -17,23 +18,21 @@ for dataset in clean_set:
 	dataset['Embarked'] = label.fit_transform(dataset['Embarked'])
 	dataset['Title'] = dataset['Name'].str.split(", ", expand=True)[1].str.split(".", expand=True)[0]
 	dataset['Title'] = dataset['Title'].map({'Mr':0, 'Mrs': 1, 'Miss': 2, 'Master': 3})
-	dataset['Title'] = dataset['Title'].fillna('4')
+	dataset['Title'] = dataset['Title'].fillna(4)
 	dataset['Sex'] = label.fit_transform(dataset['Sex'])
-	dataset['FamilyUnit'] = dataset['SibSp'] + dataset['Parch']
-	dataset['Age'] = dataset.groupby('Title').transform(lambda x: x.fillna(round(x.mean())))['Age']
 
-features = train_set[['Pclass','Sex','SibSp','Parch','Fare','Embarked','Title']] #, 'FamilyUnit']]
+features = train_set[['Pclass','Sex','SibSp','Parch','Fare','Embarked','Title']]
 survival = train_set[['Survived']]
 
-test_X = test_set[['Pclass','Sex','SibSp','Parch','Fare','Embarked','Title']] #, 'FamilyUnit']]
+test_X = test_set[['Pclass','Sex','SibSp','Parch','Fare','Embarked','Title']]
 
 #Training Model
-RF_Model = GradientBoostingClassifier()
-RF_Model.fit(features, survival.values.ravel())
+XGB_Model = XGBClassifier()
+XGB_Model.fit(features, survival.values.ravel())
 
 #Testing Model and Submitting
-RFy_pred = RF_Model.predict(test_X) #Predicting based on testing data
-submit = [test_set['PassengerId'], RFy_pred]
+XGBy_pred = XGB_Model.predict(test_X) #Predicting based on testing data
+submit = [test_set['PassengerId'], XGBy_pred]
 submit = DataFrame(submit, index = ['PassengerId', 'Survived']).T
 submit = submit.set_index('PassengerId')
 submit.to_csv('predictions.csv')
